@@ -1,0 +1,16 @@
+{
+  "teachers": [
+    {
+      "username": "admin",
+      "password": "school123"
+    },
+    {
+      "username": "principal",
+      "password": "mergington2026"
+    },
+    {
+      "username": "teacher1", 
+      "password": "teacher123"
+    }
+  ]
+}

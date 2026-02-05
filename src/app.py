@@ -5,14 +5,50 @@ A super simple FastAPI application that allows students to view and sign up
 for extracurricular activities at Mergington High School.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request, Response, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from fastapi.security import HTTPBearer
 import os
+import json
 from pathlib import Path
+import uuid
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
+
+# Session storage (in-memory for simplicity)
+active_sessions = {}
+
+# Load teacher credentials
+def load_teachers():
+    teachers_file = Path(__file__).parent / "teachers.json"
+    try:
+        with open(teachers_file, 'r') as f:
+            data = json.load(f)
+            return {teacher["username"]: teacher["password"] for teacher in data["teachers"]}
+    except FileNotFoundError:
+        return {}
+
+teachers = load_teachers()
+
+# Authentication helper functions
+def create_session(username: str) -> str:
+    session_id = str(uuid.uuid4())
+    active_sessions[session_id] = {"username": username}
+    return session_id
+
+def get_session(request: Request) -> dict:
+    session_id = request.cookies.get("session_id")
+    if session_id and session_id in active_sessions:
+        return active_sessions[session_id]
+    return None
+
+def require_admin(request: Request):
+    session = get_session(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return session
 
 # Mount the static files directory
 current_dir = Path(__file__).parent
@@ -88,9 +124,41 @@ def get_activities():
     return activities
 
 
+# Authentication endpoints
+@app.post("/auth/login")
+def login(request: Request, response: Response, username: str = Form(...), password: str = Form(...)):
+    """Login endpoint for teachers"""
+    if username in teachers and teachers[username] == password:
+        session_id = create_session(username)
+        response.set_cookie(key="session_id", value=session_id, httponly=True, max_age=86400)  # 24 hours
+        return {"message": "Login successful", "username": username}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+
+@app.post("/auth/logout")
+def logout(request: Request, response: Response):
+    """Logout endpoint"""
+    session_id = request.cookies.get("session_id")
+    if session_id and session_id in active_sessions:
+        del active_sessions[session_id]
+    response.delete_cookie("session_id")
+    return {"message": "Logout successful"}
+
+
+@app.get("/auth/status")
+def auth_status(request: Request):
+    """Check if user is authenticated"""
+    session = get_session(request)
+    if session:
+        return {"authenticated": True, "username": session["username"]}
+    else:
+        return {"authenticated": False}
+
+
 @app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
-    """Sign up a student for an activity"""
+def signup_for_activity(activity_name: str, email: str, request: Request, admin_session=Depends(require_admin)):
+    """Sign up a student for an activity - requires admin authentication"""
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
@@ -111,8 +179,8 @@ def signup_for_activity(activity_name: str, email: str):
 
 
 @app.delete("/activities/{activity_name}/unregister")
-def unregister_from_activity(activity_name: str, email: str):
-    """Unregister a student from an activity"""
+def unregister_from_activity(activity_name: str, email: str, request: Request, admin_session=Depends(require_admin)):
+    """Unregister a student from an activity - requires admin authentication"""
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
