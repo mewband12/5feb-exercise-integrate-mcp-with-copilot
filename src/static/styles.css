@@ -36,19 +36,28 @@ main {
   justify-content: center;
 }
 
-@media (min-width: 768px) {
-  main {
-    grid-template-columns: 2fr 1fr;
-  }
-}
-
 section {
   background-color: white;
   padding: 20px;
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 500px;
+}
+
+#activities-container {
+  max-width: 1200px;
+}
+
+#activities-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  #activities-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 section h3 {
@@ -59,11 +68,14 @@ section h3 {
 }
 
 .activity-card {
-  margin-bottom: 15px;
+  margin-bottom: 0;
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 5px;
   background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .activity-card h4 {
@@ -73,6 +85,23 @@ section h3 {
 
 .activity-card p {
   margin-bottom: 8px;
+}
+
+.register-btn {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  font-size: 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: auto;
+  width: 100%;
+}
+
+.register-btn:hover {
+  background-color: #45a049;
 }
 
 /* New styles for participants section */
@@ -169,6 +198,10 @@ button:hover {
   margin-top: 20px;
   padding: 10px;
   border-radius: 4px;
+}
+
+#register-message {
+  margin-top: 15px;
 }
 
 .success {
