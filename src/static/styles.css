@@ -200,6 +200,11 @@ button:hover {
   border-radius: 4px;
 }
 
+.temp-message {
+  padding: 10px;
+  border-radius: 4px;
+}
+
 #register-message {
   margin-top: 15px;
 }

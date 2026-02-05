@@ -26,6 +26,27 @@ document.addEventListener("DOMContentLoaded", () => {
   let isAuthenticated = false;
   let currentUser = null;
 
+  // Helper function to show temporary messages
+  function showMessage(message, type) {
+    // Create a temporary message element
+    const messageEl = document.createElement("div");
+    messageEl.className = `temp-message ${type}`;
+    messageEl.textContent = message;
+    messageEl.style.position = "fixed";
+    messageEl.style.top = "20px";
+    messageEl.style.right = "20px";
+    messageEl.style.zIndex = "3000";
+    messageEl.style.maxWidth = "300px";
+    messageEl.style.padding = "10px";
+    messageEl.style.borderRadius = "4px";
+    
+    document.body.appendChild(messageEl);
+    
+    setTimeout(() => {
+      messageEl.remove();
+    }, 3000);
+  }
+
   // Authentication functions
   async function checkAuthStatus() {
     try {
@@ -354,25 +375,6 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error registering:", error);
     }
   });
-
-  // Helper function to show temporary messages
-  function showMessage(message, type) {
-    // Create a temporary message element
-    const messageEl = document.createElement("div");
-    messageEl.className = `message ${type}`;
-    messageEl.textContent = message;
-    messageEl.style.position = "fixed";
-    messageEl.style.top = "20px";
-    messageEl.style.right = "20px";
-    messageEl.style.zIndex = "3000";
-    messageEl.style.maxWidth = "300px";
-    
-    document.body.appendChild(messageEl);
-    
-    setTimeout(() => {
-      messageEl.remove();
-    }, 3000);
-  }
 
   // Initialize app
   checkAuthStatus(); // Check if user is already logged in
