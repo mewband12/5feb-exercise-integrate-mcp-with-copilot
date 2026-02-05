@@ -15,7 +15,7 @@ In this exercise, you will:
 1. Integrate a GitHub MCP server with GitHub Copilot.
 2. Delegate Copilot to research similar projects and open issues.
 3. Ask Copilot to find an important issue and implement it from idea to pull request.
-4. Add comments to a recently closed issue.
+4. Add comments to a recently closed issue. 
 
 ### How to start this exercise
 
