@@ -1,8 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
   const activitiesList = document.getElementById("activities-list");
-  const activitySelect = document.getElementById("activity");
-  const signupForm = document.getElementById("signup-form");
-  const messageDiv = document.getElementById("message");
   
   // Auth elements
   const userIcon = document.getElementById("user-icon");
@@ -15,12 +12,40 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
   const loginMessage = document.getElementById("login-message");
   const closeModal = document.querySelector(".close");
-  const signupContainer = document.getElementById("signup-container");
   const usernameDisplay = document.getElementById("username-display");
+  
+  // Registration modal elements
+  const registerModal = document.getElementById("register-modal");
+  const registerModalClose = document.getElementById("register-modal-close");
+  const registerForm = document.getElementById("register-form");
+  const registerMessage = document.getElementById("register-message");
+  const registerActivityName = document.getElementById("register-activity-name");
+  let currentActivityForRegistration = null;
   
   // Auth state
   let isAuthenticated = false;
   let currentUser = null;
+
+  // Helper function to show temporary messages
+  function showMessage(message, type) {
+    // Create a temporary message element
+    const messageEl = document.createElement("div");
+    messageEl.className = `temp-message ${type}`;
+    messageEl.textContent = message;
+    messageEl.style.position = "fixed";
+    messageEl.style.top = "20px";
+    messageEl.style.right = "20px";
+    messageEl.style.zIndex = "3000";
+    messageEl.style.maxWidth = "300px";
+    messageEl.style.padding = "10px";
+    messageEl.style.borderRadius = "4px";
+    
+    document.body.appendChild(messageEl);
+    
+    setTimeout(() => {
+      messageEl.remove();
+    }, 3000);
+  }
 
   // Authentication functions
   async function checkAuthStatus() {
@@ -50,15 +75,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (authenticated) {
       loginSection.classList.add("hidden");
       logoutSection.classList.remove("hidden");
-      signupContainer.classList.remove("hidden");
       usernameDisplay.textContent = `Welcome, ${currentUser}`;
     } else {
       loginSection.classList.remove("hidden");
       logoutSection.classList.add("hidden");
-      signupContainer.classList.add("hidden");
       usernameDisplay.textContent = "";
     }
-    // Refresh activities to show/hide delete buttons
+    // Refresh activities to show/hide delete buttons and register buttons
     fetchActivities();
   }
 
@@ -95,6 +118,20 @@ document.addEventListener("DOMContentLoaded", () => {
       loginForm.reset();
       loginMessage.classList.add("hidden");
     }
+    if (event.target === registerModal) {
+      registerModal.classList.add("hidden");
+      registerForm.reset();
+      registerMessage.classList.add("hidden");
+      currentActivityForRegistration = null;
+    }
+  });
+
+  // Register modal close handler
+  registerModalClose.addEventListener("click", () => {
+    registerModal.classList.add("hidden");
+    registerForm.reset();
+    registerMessage.classList.add("hidden");
+    currentActivityForRegistration = null;
   });
 
   // Login form handler
@@ -167,9 +204,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch("/activities");
       const activities = await response.json();
 
-      // Clear loading message and select dropdown
+      // Clear loading message
       activitiesList.innerHTML = "";
-      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -195,6 +231,11 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>`
             : `<p><em>No participants yet</em></p>`;
 
+        // Add register button for authenticated users
+        const registerButtonHTML = isAuthenticated 
+          ? `<button class="register-btn" data-activity="${name}">Register Student</button>`
+          : '';
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
@@ -203,17 +244,10 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="participants-container">
             ${participantsHTML}
           </div>
+          ${registerButtonHTML}
         `;
 
         activitiesList.appendChild(activityCard);
-
-        // Add option to admin select dropdown
-        if (isAuthenticated) {
-          const option = document.createElement("option");
-          option.value = name;
-          option.textContent = name;
-          activitySelect.appendChild(option);
-        }
       });
 
       // Add event listeners to delete buttons (only if authenticated)
@@ -221,12 +255,26 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".delete-btn").forEach((button) => {
           button.addEventListener("click", handleUnregister);
         });
+        
+        // Add event listeners to register buttons
+        document.querySelectorAll(".register-btn").forEach((button) => {
+          button.addEventListener("click", handleRegisterClick);
+        });
       }
     } catch (error) {
       activitiesList.innerHTML =
         "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
     }
+  }
+
+  // Handle register button click
+  function handleRegisterClick(event) {
+    const button = event.target;
+    const activity = button.getAttribute("data-activity");
+    currentActivityForRegistration = activity;
+    registerActivityName.textContent = `Activity: ${activity}`;
+    registerModal.classList.remove("hidden");
   }
 
   // Handle unregister functionality (admin only)
@@ -254,32 +302,22 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (response.ok) {
-        messageDiv.textContent = result.message;
-        messageDiv.className = "success";
+        showMessage(result.message, 'success');
         fetchActivities(); // Refresh activities list
       } else if (response.status === 401) {
-        messageDiv.textContent = "Authentication required. Please log in.";
-        messageDiv.className = "error";
+        showMessage("Authentication required. Please log in.", 'error');
         checkAuthStatus(); // Refresh auth state
       } else {
-        messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        showMessage(result.detail || "An error occurred", 'error');
       }
-
-      messageDiv.classList.remove("hidden");
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
     } catch (error) {
-      messageDiv.textContent = "Failed to unregister. Please try again.";
-      messageDiv.className = "error";
-      messageDiv.classList.remove("hidden");
+      showMessage("Failed to unregister. Please try again.", 'error');
       console.error("Error unregistering:", error);
     }
   }
 
-  // Handle form submission (admin only)
-  signupForm.addEventListener("submit", async (event) => {
+  // Handle registration form submission
+  registerForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     if (!isAuthenticated) {
@@ -287,13 +325,17 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const email = document.getElementById("email").value;
-    const activity = document.getElementById("activity").value;
+    if (!currentActivityForRegistration) {
+      showMessage("No activity selected", 'error');
+      return;
+    }
+
+    const email = document.getElementById("student-email").value;
 
     try {
       const response = await fetch(
         `/activities/${encodeURIComponent(
-          activity
+          currentActivityForRegistration
         )}/signup?email=${encodeURIComponent(email)}`,
         {
           method: "POST",
@@ -304,28 +346,33 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (response.ok) {
-        messageDiv.textContent = result.message;
-        messageDiv.className = "success";
-        signupForm.reset();
+        registerMessage.textContent = result.message;
+        registerMessage.className = "success";
+        registerMessage.classList.remove("hidden");
+        
+        setTimeout(() => {
+          registerModal.classList.add("hidden");
+          registerForm.reset();
+          registerMessage.classList.add("hidden");
+          currentActivityForRegistration = null;
+        }, 1500);
+        
         fetchActivities(); // Refresh activities list
       } else if (response.status === 401) {
-        messageDiv.textContent = "Authentication required. Please log in.";
-        messageDiv.className = "error";
+        registerMessage.textContent = "Authentication required. Please log in.";
+        registerMessage.className = "error";
+        registerMessage.classList.remove("hidden");
         checkAuthStatus(); // Refresh auth state
       } else {
-        messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        registerMessage.textContent = result.detail || "An error occurred";
+        registerMessage.className = "error";
+        registerMessage.classList.remove("hidden");
       }
-
-      messageDiv.classList.remove("hidden");
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
     } catch (error) {
-      messageDiv.textContent = "Failed to sign up. Please try again.";
-      messageDiv.className = "error";
-      messageDiv.classList.remove("hidden");
-      console.error("Error signing up:", error);
+      registerMessage.textContent = "Failed to register. Please try again.";
+      registerMessage.className = "error";
+      registerMessage.classList.remove("hidden");
+      console.error("Error registering:", error);
     }
   });
 
