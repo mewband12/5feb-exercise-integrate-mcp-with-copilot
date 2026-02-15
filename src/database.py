@@ -5,6 +5,7 @@ Database connection and operations module for MySQL persistence.
 import mysql.connector
 from mysql.connector import Error
 import os
+import bcrypt
 from typing import Optional, List, Dict, Any
 from contextlib import contextmanager
 
@@ -20,6 +21,16 @@ class Database:
             'database': os.getenv('DB_NAME', 'school_management')
         }
         self.connection = None
+    
+    @staticmethod
+    def hash_password(password: str) -> str:
+        """Hash a password using bcrypt."""
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    @staticmethod
+    def verify_password(password: str, hashed: str) -> bool:
+        """Verify a password against its hash."""
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
     
     def connect(self):
         """Establish database connection."""
@@ -62,11 +73,11 @@ class Database:
             temp_conn = mysql.connector.connect(**temp_config)
             cursor = temp_conn.cursor()
             
-            # Create database if it doesn't exist
-            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_name}")
-            cursor.execute(f"USE {db_name}")
+            # Create database if it doesn't exist - use identifier quoting for safety
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
+            cursor.execute(f"USE `{db_name}`")
             
-            # Create users table
+            # Create users table with larger password field for bcrypt hashes
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -132,11 +143,11 @@ class Database:
                 print("Database already seeded")
                 return
             
-            # Insert initial users (teachers)
+            # Insert initial users (teachers) with hashed passwords
             teachers = [
-                ('admin', 'school123', 'admin'),
-                ('principal', 'mergington2026', 'admin'),
-                ('teacher1', 'teacher123', 'teacher')
+                ('admin', self.hash_password('school123'), 'admin'),
+                ('principal', self.hash_password('mergington2026'), 'admin'),
+                ('teacher1', self.hash_password('teacher123'), 'teacher')
             ]
             cursor.executemany(
                 "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
@@ -232,6 +243,8 @@ class Database:
     def get_all_clubs(self) -> List[Dict[str, Any]]:
         """Get all clubs with participant information."""
         with self.get_cursor() as cursor:
+            # Set a higher limit for GROUP_CONCAT to handle many participants
+            cursor.execute("SET SESSION group_concat_max_len = 10000")
             cursor.execute("""
                 SELECT 
                     c.id,
@@ -250,6 +263,8 @@ class Database:
     def get_club_by_name(self, club_name: str) -> Optional[Dict[str, Any]]:
         """Get club by name with participants."""
         with self.get_cursor() as cursor:
+            # Set a higher limit for GROUP_CONCAT to handle many participants
+            cursor.execute("SET SESSION group_concat_max_len = 10000")
             cursor.execute("""
                 SELECT 
                     c.id,

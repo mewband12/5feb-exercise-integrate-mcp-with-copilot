@@ -85,7 +85,7 @@ This will:
 #### users
 - `id`: Primary key
 - `username`: Unique username
-- `password`: Password (plain text for development)
+- `password`: Hashed password (using bcrypt)
 - `role`: User role (admin/teacher)
 - `created_at`: Timestamp
 

@@ -90,7 +90,7 @@ def get_activities():
 def login(request: Request, response: Response, username: str = Form(...), password: str = Form(...)):
     """Login endpoint for teachers"""
     user = db.get_user_by_username(username)
-    if user and user['password'] == password:
+    if user and db.verify_password(password, user['password']):
         session_id = create_session(username)
         response.set_cookie(key="session_id", value=session_id, httponly=True, max_age=86400)  # 24 hours
         return {"message": "Login successful", "username": username}
