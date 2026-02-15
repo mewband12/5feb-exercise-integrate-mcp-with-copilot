@@ -15,16 +15,15 @@ from database import db
 def main():
     print("Initializing database...")
     
-    # Connect to database
-    if not db.connect():
-        print("Failed to connect to database. Please check your database configuration.")
-        print("Make sure MySQL is running and environment variables are set correctly.")
-        sys.exit(1)
-    
-    # Initialize schema
+    # Initialize schema (this handles its own connection)
     print("Creating database schema...")
     if not db.init_database():
         print("Failed to initialize database schema.")
+        sys.exit(1)
+    
+    # Now connect to the created database
+    if not db.connect():
+        print("Failed to connect to database after creation.")
         sys.exit(1)
     
     # Seed initial data
