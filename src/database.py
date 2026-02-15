@@ -13,6 +13,9 @@ from contextlib import contextmanager
 class Database:
     """Database manager for MySQL operations."""
     
+    # Constants
+    GROUP_CONCAT_MAX_LENGTH = 10000
+    
     def __init__(self):
         self.config = {
             'host': os.getenv('DB_HOST', 'localhost'),
@@ -21,6 +24,12 @@ class Database:
             'database': os.getenv('DB_NAME', 'school_management')
         }
         self.connection = None
+    
+    @staticmethod
+    def validate_database_name(name: str) -> bool:
+        """Validate database name to prevent SQL injection."""
+        import re
+        return bool(re.match(r'^[a-zA-Z0-9_]+$', name))
     
     @staticmethod
     def hash_password(password: str) -> str:
@@ -68,6 +77,10 @@ class Database:
         # First connect without database to create it if needed
         temp_config = self.config.copy()
         db_name = temp_config.pop('database')
+        
+        # Validate database name to prevent SQL injection
+        if not self.validate_database_name(db_name):
+            raise ValueError(f"Invalid database name: {db_name}. Only alphanumeric characters and underscores are allowed.")
         
         try:
             temp_conn = mysql.connector.connect(**temp_config)
@@ -244,7 +257,7 @@ class Database:
         """Get all clubs with participant information."""
         with self.get_cursor() as cursor:
             # Set a higher limit for GROUP_CONCAT to handle many participants
-            cursor.execute("SET SESSION group_concat_max_len = 10000")
+            cursor.execute(f"SET SESSION group_concat_max_len = {self.GROUP_CONCAT_MAX_LENGTH}")
             cursor.execute("""
                 SELECT 
                     c.id,
@@ -264,7 +277,7 @@ class Database:
         """Get club by name with participants."""
         with self.get_cursor() as cursor:
             # Set a higher limit for GROUP_CONCAT to handle many participants
-            cursor.execute("SET SESSION group_concat_max_len = 10000")
+            cursor.execute(f"SET SESSION group_concat_max_len = {self.GROUP_CONCAT_MAX_LENGTH}")
             cursor.execute("""
                 SELECT 
                     c.id,

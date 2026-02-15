@@ -149,7 +149,7 @@ def unregister_from_activity(activity_name: str, email: str, request: Request, a
     if not club:
         raise HTTPException(status_code=404, detail="Activity not found")
     
-    # Get or create student
+    # Get student (create if doesn't exist for consistency)
     student_id = db.get_or_create_student(email)
     
     # Validate student is signed up
